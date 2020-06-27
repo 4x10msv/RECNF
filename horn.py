@@ -19,10 +19,14 @@ class Fun:
     parameter = []
 
     def __init__(self, string):
+        self.name = ""
+        #函数的参数列表
+        self.parameter = []
         if string == "":
             return
 
         string.replace(" ", "")
+        string.replace("\t", "")
         #寻找左右括弧的位置
         left_bracket_index = string.index("(")
         right_bracket_index = string.index(")")
@@ -39,10 +43,14 @@ class Clause:
     right_fun = []
 
     def __init__(self, string):
+        self.left_fun = Fun("")
+        #右端函数列表
+        self.right_fun = []
         if string == "":
             return
 
         string.replace(" ", "")
+        string.replace("\t", "")
         #查找分隔符位置
         gap_index = string.index("<-")
         #获取左端函数
@@ -83,68 +91,147 @@ def is_var(string:str):
 #监测两个函数是否能够匹配，认为
 def match(right_fun:Fun,left_fun:Fun):
     if right_fun.name!=left_fun.name:
-        return False
+        return {}
     if len(left_fun.parameter)!=len(right_fun.parameter):
-        return False
-    mm={}
+        return {}
+    #随便写的数，防止为空
+    mm={1.78:2}
     for i in range(len(right_fun.parameter)):
-        if not is_var(right_fun.parameter[i]) and not is_var(left_fun.parameter[i]):
-            if right_fun.parameter[i]!=left_fun.parameter[i]:
-                return False
-        
+        if not is_var(right_fun.parameter[i]) and not is_var(left_fun.parameter[i]) and right_fun.parameter[i]!=left_fun.parameter[i]:
+            return {}
+        if is_var(right_fun.parameter[i]):
+            mm[right_fun.parameter[i]]=left_fun.parameter[i]
+        elif is_var(left_fun.parameter[i]):
+            mm[left_fun.parameter[i]]=right_fun.parameter[i]
 
-    return True
+    return mm
 
 
 #clause1是推断，clause2是推论或者断言不能搞错顺序
-#如果合并出现问题，返回false，如果合并出来的是停机语句，则返回true
+#如果合并出现问题或者无法合并，返回false，如果是空子句，说明正确，返回映射
 #正常合并返回生成的新子句
 def merge(clause1:Clause,clause2:Clause):
-    if clause1.left_fun.name!="" or clause2.right_fun!=[]:
+    if clause1.left_fun.name!="":
         return False
-    ans_clause=Clause
+    ans_clause=Clause("")
     left_fun=clause2.left_fun
     #对于集合1的右端中的每一个集合，都去集合列表中寻找有没有可能匹配的左端
+    flag=0
+    par_to_par_convert={}
+    need_to_convert_right_fun=Fun("")
     for right_fun in clause1.right_fun:
-        if match(right_fun,left_fun):
-            tem_fun=Fun
+        par_to_par_convert=match(right_fun,left_fun)
+        if len(par_to_par_convert)!=0:
+            flag=1
+            need_to_convert_right_fun=right_fun
+            break
+    if flag==1:
+        for i in range(len(clause1.right_fun)):
+            right_fun=clause1.right_fun[i]
+        #for right_fun in clause1.right_fun:
+            if right_fun==need_to_convert_right_fun:   
+                for clu2_right_fun in clause2.right_fun:
+                    tem_fun=Fun("")
+                    tem_fun.name=clu2_right_fun.name
+                    for par in clu2_right_fun.parameter:
+                        tem_fun.parameter.append(par_to_par_convert.get(par,par))
+                    ans_clause.right_fun.append(tem_fun)
+            else:
+                tem_fun=Fun("")
+                tem_fun.name=right_fun.name
+                for par in right_fun.parameter:
+                    tem_fun.parameter.append(par_to_par_convert.get(par,par))
+                ans_clause.right_fun.append(tem_fun)
+        if ans_clause.left_fun.name=="" and ans_clause.right_fun==[]:
+            return par_to_par_convert
+        return ans_clause
+    else:
+        return False
 
-            for i in range(len(right_fun.parameter)):
-                if is_var(right_fun.parameter[i]) and not is_var(left_fun.parameter[i]):
-                    pass
-        else:
-            ans_clause.right_fun.append(right_fun)          
-            # for par in right_fun.parameter:
-            #     if is_var(par) and !is_var()
 
-    
-    
+def horn_run(ss):
 
+    clause_list=deal_string(ss)
 
-ss = '''Father(Bob,Allan)<-
-Brother(x2,x3)<-Father(x1,x2),Father(x1,x3)
+    del_index=[]
+    need_to_solve=[]
+    for i in range(len(clause_list)):
+        clause=clause_list[i]
+        if clause.left_fun.name=="":
+            need_to_solve.append(clause)
+            del_index.append(i)
+            #clause_list.remove(clause)
+    cnt=0
+    for i in del_index:
+        clause_list.pop(i-cnt)
+        cnt+=1
+    #目前need_to_solve中是待解决集合，clause_list是已知条件的集合
+    for q in need_to_solve:
+        question_list=[q]
+        while True:
+            flag=0
+            possible_result=[]
+            for question in question_list:
+                for know_clause in clause_list:
+                    merge_result=merge(question,know_clause)
+                    if not isinstance(merge_result,bool):
+                        possible_result.append(merge_result)
+                        flag=1
+            if flag==0:
+                print("该项错误")
+                break
+            else:
+                question_list=possible_result
+                flag=0
+                for result in possible_result:
+                    if isinstance(result,dict):
+                        flag=1
+                        print("该项正确")
+                        #如果集合中有字符映射，输出对应的求解值
+                        for key in result:
+                            if isinstance(key,str):
+                                print(key+":"+result[key])
+                        break
+                if flag:
+                    break
+
+'''
+test1:
+Father(Bob,Allan)<-
+Brother(y,z)<-Father(x,y),Father(x,z)
 Father(Bob,Nick)<-
-<-Brother(Allan,Nick)'''
+<-Brother(Allan,Nick)
+'''
 
-clause_list=deal_string(ss)
+'''
+test2:
+AT(dog,x)<-AT(zhangsan,x)
+AT(zhangsan,train)<-
+<-AT(dog,train)
+'''
 
-need_to_solve=[]
-for clause in clause_list:
-    if clause.left_fun.name=="":
-        need_to_solve.append(clause)
-        clause_list.remove(clause)
-#目前need_to_solve中是待解决集合，clause_list是已知条件的集合
-for question in need_to_solve:
-    while 1:
-        merge()
+'''
+test3:
+mother(linda,bob)<-
+mother(linda,john)<-
+mother(linda,mary)<-
+mother(mary,bill)<-
+father(bob,allan)<-
+father(bob,nick)<-
+father(bob,kevin)<-
+husband(lary,linda)<-
+brother(y,z)<-mother(x,y),mother(x,z)
+brother(y,z)<-father(x,y),father(x,z)
+brother(x,z)<-brother(x,y),brother(y,z)
+<-brother(allan,nick)
+<-brother(kevin,nick)
+'''
 
-
-
-# for cc in clause_list:
-#     print(cc.left_fun.name)
-#     for kk in cc.left_fun.parameter:
-#         print(kk)
-#     for kk in cc.right_fun:
-#         print(kk.name)
-#         for mm in kk.parameter:
-#             print(mm)
+'''
+test4:
+cousin(x,y)<-parent(u,x),parent(v,y),brother(u,v)
+parent(贾政,贾宝玉)<-
+parent(贾敏,林黛玉)<-
+brother(贾政,贾敏)<-
+<-cousin(贾宝玉,林黛玉)
+'''
