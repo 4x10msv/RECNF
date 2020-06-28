@@ -30,7 +30,7 @@ def horn_run_and_get_detail(s):
         showText.pack()
     
     showText.config(state = NORMAL)
-    
+    showText.delete(1.0,tk.END)
     #窗口插入归结过程
     # chars1 = "请在这里放上归结过程"
     # chars2 = "测试多行输出"
@@ -65,6 +65,7 @@ def runCnfResolution(rawStr):
     
     #todo
     showText.config(state = NORMAL)
+    showText.delete(1.0,tk.END)
     showText.insert("insert",'\n'+progText)
     
     #禁止用户输入
