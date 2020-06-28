@@ -177,6 +177,8 @@ def show_route(route:dict,need_to_solve:list,now_node:Clause,now_num:int,clause_
 
 
 def horn_run(ss):
+    if ss=="":
+        return ["0.<-","该项归结正确"]
     str_list=[]
     clause_list=deal_string(ss)
 
@@ -231,14 +233,14 @@ def horn_run(ss):
                 for result in possible_result:
                     if isinstance(result,dict):
                         flag=1
-                        #如果集合中有字符映射，输出对应的求解值
-                        for key in result:
-                            if isinstance(key,str):
-                                str_list.append(key+":"+result[key])
                                 #print(key+":"+result[key])
 
                         ans_num=show_route(route,need_to_solve,empty_clause,ans_num,clause_to_num,str_list)
                         str_list.append("该项归结正确")
+                        #如果集合中有字符映射，输出对应的求解值
+                        for key in result:
+                            if isinstance(key,str):
+                                str_list.append("变量"+key+"对应常量"+result[key])
                         #print("该项归结正确")
                         break
                         
