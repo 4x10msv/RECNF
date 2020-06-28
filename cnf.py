@@ -208,19 +208,20 @@ class ClauseSet:
     def addClause(self, newClause):
         self.clauseList.append(newClause)
         self.clauseNum += 1
-    def solve(self):
+    def solve(self, maxLoopCnt = 200):
         stepCnt = 0
         loopCnt = 0
+        progText = ''
         while True:
-            if loopCnt > 200:
-                print('归结次数超过上限，程序终止')
+            if loopCnt > maxLoopCnt:
+                #print('循环次数超过上限，程序终止')
+                progText += '循环次数超过上限，程序终止\n'
                 break
             self.clauseList.sort(key=lambda x: x.literalNum)
             if self.clauseList[0].literalNum == 0:
-                print('归结成功')
+                #print('归结成功')
+                progText += '归结成功\n'
                 break
-            #self.printClauses()
-            #print('---------------------------')
             isFound = False
             for i in range(0, self.clauseNum):
                 for j in range(i + 1, self.clauseNum):
@@ -230,29 +231,29 @@ class ClauseSet:
                     if resTag in self.resHistory:
                         continue
                     result = self.clauseList[i].resolution(self.clauseList[j])
-                    #print(resTag)
-                    #print(result[0])
-                    #print('---------------------')
                     if result[0]:  ## 归结成功
                         isFound = True
                         self.addClause(result[1])
                         self.resHistory[resTag] = True
                         stepCnt += 1
-                        print(resTag)
-                        print(result[1].toString())
-                        print('----------------------')
+                        #print(resTag)
+                        #print(result[1].toString())
+                        #print('----------------------')
+                        progText += resTag + '\n' + result[1].toString() + '\n'
+                        progText += '---------------------------------------\n'
                         break
                 if isFound:
                     break
             loopCnt += 1
+        return progText
     def printClauses(self):
         for clause in self.clauseList:
             print(clause.toString())
 
+# 接口，raw为调节字符串，返回过程的字符串
 def cnfResolution(rawStr):
     clauseSet = ClauseSet(rawStr)
-    clauseSet.solve()
-
+    return clauseSet.solve()
 
 if __name__ == '__main__':
     testStr = '''~Killer(x)|Hate(x,A)
@@ -261,9 +262,4 @@ Killer(A)|Killer(B)|Killer(C)
 ~Killer(c)|~Rich(c,A)
 ~Hate(b,A)|~Hate(b,B)|~Hate(b,C)
 Rich(z,A)|Hate(B,z)'''
-    testStr2 ='''Killer(C)|Hate(B,A)
-~Hate(b,A)|~Hate(b,B)|~Hate(b,C)
-Killer(C)|Hate(B,B)
-Rich(z,A)|Hate(B,z)
-~Killer(c)|~Rich(c,A)'''
-    cnfResolution(testStr)
+    print(cnfResolution(testStr))
