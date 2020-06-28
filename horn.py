@@ -1,6 +1,6 @@
 '''
 horn子句定义的格式：
-括号外大写字母开头的英文串为函数名，后面带有括号，括号内为变量与常量名
+括号外英文串为函数名，后面带有括号，括号内为变量与常量名
 括号内非一个字母的英文串或者大写单个英文串为常量名
 括号内单小写字母为变量名
 推导符号用<-表示
@@ -34,6 +34,16 @@ class Fun:
         parameter_string = string[left_bracket_index + 1:right_bracket_index]
         self.parameter = parameter_string.split(",")
 
+    def to_str(self)->str:
+        if self.name=="":
+            return ""
+        ret_str=self.name+"("
+        for par in self.parameter:
+            if par != self.parameter[0]:
+                ret_str+=","
+            ret_str+=par
+        ret_str+=")"
+        return ret_str
 
 #子句的定义
 class Clause:
@@ -69,6 +79,14 @@ class Clause:
             right_string_list = string[gap_index + 2:].split(".")
             for string in right_string_list:
                 self.right_fun.append(Fun(string))
+        
+    def to_str(self)->str:
+        ret_str=self.left_fun.to_str()+"<-"
+        for fun in self.right_fun:
+            if fun != self.right_fun[0]:
+                ret_str+=","
+            ret_str+=fun.to_str()
+        return ret_str
 
 
 #首先对于输入得到的串进行规范化处理,返回带有子句对象的列表
@@ -149,10 +167,20 @@ def merge(clause1:Clause,clause2:Clause):
         return False
 
 
-def horn_run(ss):
+def show_route(route:dict,need_to_solve:list,now_node:Clause,now_num:int,clause_to_num:dict,str_list:list):
+    if now_node in need_to_solve:
+        return now_num+1
+    get_num=show_route(route,need_to_solve,route[now_node][0],now_num,clause_to_num,str_list)
+    str_list.append(str(get_num)+"."+now_node.to_str()+" 由"+str(get_num-1)+"式与"+str(clause_to_num[route[now_node][1]])+"式归结可得")
+    #print(str(get_num)+"."+now_node.to_str()+" 由"+str(get_num-1)+"式与"+str(clause_to_num[route[now_node][1]])+"式归结可得")
+    return get_num+1
 
+
+def horn_run(ss):
+    str_list=[]
     clause_list=deal_string(ss)
 
+    route={}
     del_index=[]
     need_to_solve=[]
     for i in range(len(clause_list)):
@@ -166,19 +194,36 @@ def horn_run(ss):
         clause_list.pop(i-cnt)
         cnt+=1
     #目前need_to_solve中是待解决集合，clause_list是已知条件的集合
+    num_clause=len(clause_list)
+    clause_to_num={}
+    for i in range(num_clause):
+        clause_to_num[clause_list[i]]=i
+        str_list.append(str(i)+"."+clause_list[i].to_str())
+        #print(str(i)+"."+clause_list[i].to_str())
+
+    ans_num=num_clause
     for q in need_to_solve:
+        str_list.append(str(ans_num)+"."+q.to_str())
+        #print(str(ans_num)+"."+q.to_str())
         question_list=[q]
         while True:
             flag=0
+            empty_clause=Clause("")
             possible_result=[]
             for question in question_list:
                 for know_clause in clause_list:
                     merge_result=merge(question,know_clause)
                     if not isinstance(merge_result,bool):
+                        if isinstance(merge_result,dict):
+                            route[empty_clause]=(question,know_clause)
+                        else:
+                            route[merge_result]=(question,know_clause)
                         possible_result.append(merge_result)
                         flag=1
             if flag==0:
-                print("该项错误")
+                str_list.append("该项归结错误")
+                #print("该项归结错误")
+                ans_num+=1
                 break
             else:
                 question_list=possible_result
@@ -186,33 +231,31 @@ def horn_run(ss):
                 for result in possible_result:
                     if isinstance(result,dict):
                         flag=1
-                        print("该项正确")
                         #如果集合中有字符映射，输出对应的求解值
                         for key in result:
                             if isinstance(key,str):
-                                print(key+":"+result[key])
+                                str_list.append(key+":"+result[key])
+                                #print(key+":"+result[key])
+
+                        ans_num=show_route(route,need_to_solve,empty_clause,ans_num,clause_to_num,str_list)
+                        str_list.append("该项归结正确")
+                        #print("该项归结正确")
                         break
+                        
                 if flag:
                     break
-
-'''
-test1:
-Father(Bob,Allan)<-
+    return str_list
+#测试用例
+'''Father(Bob,Allan)<-
 Brother(y,z)<-Father(x,y),Father(x,z)
 Father(Bob,Nick)<-
-<-Brother(Allan,Nick)
-'''
+<-Brother(Allan,Nick)'''
 
-'''
-test2:
-AT(dog,x)<-AT(zhangsan,x)
+'''AT(dog,x)<-AT(zhangsan,x)
 AT(zhangsan,train)<-
-<-AT(dog,train)
-'''
+<-AT(dog,train)'''
 
-'''
-test3:
-mother(linda,bob)<-
+'''mother(linda,bob)<-
 mother(linda,john)<-
 mother(linda,mary)<-
 mother(mary,bill)<-
@@ -224,14 +267,12 @@ brother(y,z)<-mother(x,y),mother(x,z)
 brother(y,z)<-father(x,y),father(x,z)
 brother(x,z)<-brother(x,y),brother(y,z)
 <-brother(allan,nick)
-<-brother(kevin,nick)
-'''
+<-brother(kevin,nick)'''
 
-'''
-test4:
-cousin(x,y)<-parent(u,x),parent(v,y),brother(u,v)
+'''cousin(x,y)<-parent(u,x),parent(v,y),brother(u,v)
 parent(贾政,贾宝玉)<-
 parent(贾敏,林黛玉)<-
 brother(贾政,贾敏)<-
-<-cousin(贾宝玉,林黛玉)
-'''
+<-cousin(贾宝玉,林黛玉)'''
+
+#horn_run(ss)
