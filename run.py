@@ -87,7 +87,7 @@ if __name__ == '__main__':
     
     runButton = tk.Button(
         master=window,
-        text='题目求解',
+        text='普通子句归结求解',
         command=lambda : runCnfResolution(inputText.get('1.0', 'end-1c')),
         font=("隶书",11)
     )
