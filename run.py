@@ -1,4 +1,5 @@
 import tkinter as tk
+import horn
 
 def getInputText(inputText):
     rawInput = inputText.get('1.0', 'end-1c')
@@ -22,5 +23,12 @@ if __name__ == '__main__':
         command=lambda : getInputText(inputText)
     )
     runButton.pack()
+
+    hornButton = tk.Button(
+        master=window,
+        text="字句归结求解",
+        command=lambda : horn.horn_run(inputText.get('1.0', 'end-1c'))
+    )
+    hornButton.pack()
 
     window.mainloop()
